@@ -144,6 +144,10 @@ if CMSIS_DAP
 DRIVERFILES += cmsis_dap_usb.c
 endif
 
+if KITPROG
+DRIVERFILES += kitprog.c
+endif
+
 noinst_HEADERS = \
 	bitbang.h \
 	bitq.h \

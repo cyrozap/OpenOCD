@@ -219,7 +219,8 @@ m4_define([USB0_ADAPTERS],
 	[[armjtagew], [Olimex ARM-JTAG-EW Programmer], [ARMJTAGEW]]])
 
 m4_define([HIDAPI_ADAPTERS],
-	[[[cmsis_dap], [CMSIS-DAP Compliant Debugger], [CMSIS_DAP]]])
+	[[[cmsis_dap], [CMSIS-DAP Compliant Debugger], [CMSIS_DAP]],
+	[[kitprog], [Cypress KitProg Programmer], [KITPROG]]])
 
 #========================================
 # FTD2XXX support comes in 4 forms.
@@ -1230,6 +1231,7 @@ AM_CONDITIONAL([IS_WIN32], [test $is_win32 = yes])
 AM_CONDITIONAL([IS_DARWIN], [test $is_darwin = yes])
 AM_CONDITIONAL([BITQ], [test $build_bitq = yes])
 AM_CONDITIONAL([CMSIS_DAP], [test $use_hidapi = yes])
+AM_CONDITIONAL([KITPROG], [test $use_hidapi = yes])
 
 AM_CONDITIONAL([MINIDRIVER], [test $build_minidriver = yes])
 AM_CONDITIONAL([MINIDRIVER_DUMMY], [test $build_minidriver_dummy = yes])
