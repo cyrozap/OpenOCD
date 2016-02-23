@@ -480,7 +480,6 @@ static int kitprog_acquire_psoc(uint8_t psoc_type, uint8_t acquire_mode,
 	return ERROR_OK;
 }
 
-#if 0
 static int kitprog_reset_target(void)
 {
 	int transferred;
@@ -504,7 +503,6 @@ static int kitprog_reset_target(void)
 
 	return ERROR_OK;
 }
-#endif
 
 static int kitprog_swd_reset(void)
 {
@@ -659,15 +657,35 @@ static void kitprog_swd_queue_cmd(uint8_t cmd, uint32_t *dst, uint32_t data)
 	pending_transfer_count++;
 }
 
-#if 0
 COMMAND_HANDLER(kitprog_handle_info_command)
 {
-	if (kitprog_get_version_info() == ERROR_OK)
-		kitprog_get_status();
+	if (kitprog_get_version() == ERROR_OK) {
+		LOG_INFO("KitProg v%u.%02u",
+			kitprog_handle->major_version, kitprog_handle->minor_version);
+		LOG_INFO("Hardware version: %u",
+			kitprog_handle->hardware_version);
+	} else {
+		LOG_ERROR("Failed to get KitProg version");
+		return ERROR_FAIL;
+	}
+
+	if (kitprog_get_millivolts() == ERROR_OK) {
+		LOG_INFO("VTARG = %u.%03u V",
+			kitprog_handle->millivolts / 1000, kitprog_handle->millivolts % 1000);
+	} else {
+		LOG_ERROR("Failed to get target voltage");
+		return ERROR_FAIL;
+	}
 
 	return ERROR_OK;
 }
-#endif
+
+COMMAND_HANDLER(kitprog_handle_reset_target_command)
+{
+	int retval = kitprog_reset_target();
+
+	return retval;
+}
 
 COMMAND_HANDLER(kitprog_handle_serial_command)
 {
@@ -686,7 +704,6 @@ COMMAND_HANDLER(kitprog_handle_serial_command)
 	return ERROR_OK;
 }
 
-#if 0
 static const struct command_registration kitprog_subcommand_handlers[] = {
 	{
 		.name = "info",
@@ -695,12 +712,17 @@ static const struct command_registration kitprog_subcommand_handlers[] = {
 		.usage = "",
 		.help = "show KitProg info",
 	},
+	{
+		.name = "reset_target",
+		.handler = &kitprog_handle_reset_target_command,
+		.mode = COMMAND_EXEC,
+		.usage = "",
+		.help = "reset the connected device using the KitProg's built-in target reset function",
+	},
 	COMMAND_REGISTRATION_DONE
 };
-#endif
 
 static const struct command_registration kitprog_command_handlers[] = {
-#if 0
 	{
 		.name = "kitprog",
 		.mode = COMMAND_ANY,
@@ -708,7 +730,6 @@ static const struct command_registration kitprog_command_handlers[] = {
 		.usage = "<cmd>",
 		.chain = kitprog_subcommand_handlers,
 	},
-#endif
 	{
 		.name = "kitprog_serial",
 		.handler = &kitprog_handle_serial_command,
