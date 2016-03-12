@@ -49,6 +49,7 @@ NOR_DRIVERS = \
 	nrf51.c \
 	mrvlqspi.c \
 	psoc4.c \
+	psoc5.c \
 	sim3x.c \
 	xmc4xxx.c \
 	niietcm4.c
