@@ -80,7 +80,7 @@
 
 
 struct psoc5_chip_details {
-	uint16_t id;
+	uint32_t id;
 	const char *type;
 	const char *package;
 	uint32_t flash_size_in_kb;
@@ -90,7 +90,7 @@ struct psoc5_chip_details {
  * flash_size_in_kb is not necessary as it can be decoded from SPCIF_GEOMETRY
  */
 const struct psoc5_chip_details psoc5_devices[] = {
-	{ 0xe161, "CY8C5888LTI-LP097", "QFN-68", .flash_size_in_kb = 256 }, // 0x2e161069
+	{ 0x2e161069, "CY8C5888LTI-LP097", "QFN-68", .flash_size_in_kb = 256 },
 };
 
 
@@ -109,9 +109,8 @@ static const struct psoc5_chip_details *psoc5_details_by_id(uint32_t silicon_id)
 {
 	const struct psoc5_chip_details *p = psoc5_devices;
 	unsigned int i;
-	uint16_t id = (silicon_id >> 12) & 0xffff; /* ignore die revision */
 	for (i = 0; i < sizeof(psoc5_devices)/sizeof(psoc5_devices[0]); i++, p++) {
-		if (p->id == id)
+		if (p->id == silicon_id)
 			return p;
 	}
 	LOG_DEBUG("Unknown PSoC device silicon id 0x%08" PRIx32 ".", silicon_id);
