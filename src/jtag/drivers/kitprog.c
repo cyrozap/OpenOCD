@@ -125,6 +125,7 @@ static int kitprog_hid_command(uint8_t *command, size_t command_length,
 
 static int kitprog_get_version(void);
 static int kitprog_get_millivolts(void);
+static int kitprog_get_info(void);
 
 static int kitprog_set_protocol(uint8_t protocol);
 static int kitprog_get_status(void);
@@ -149,12 +150,8 @@ static int kitprog_init(void)
 		return ERROR_JTAG_INIT_FAILED;
 	}
 
-	/* Get the device version information */
-	if (kitprog_get_version() != ERROR_OK)
-		return ERROR_FAIL;
-
-	/* Get the current reported target voltage */
-	if (kitprog_get_millivolts() != ERROR_OK)
+	/* Get the current KitProg version and target voltage */
+	if (kitprog_get_info() != ERROR_OK)
 		return ERROR_FAIL;
 
 	/* I have no idea what this does */
@@ -207,14 +204,6 @@ static int kitprog_init(void)
 		LOG_ERROR("Unable to allocate memory for KitProg queue");
 		return ERROR_FAIL;
 	}
-
-	/* Display KitProg info */
-	LOG_INFO("KitProg v%u.%02u",
-		kitprog_handle->major_version, kitprog_handle->minor_version);
-	LOG_INFO("Hardware version: %u",
-		kitprog_handle->hardware_version);
-	LOG_INFO("VTARG = %u.%03u V",
-		kitprog_handle->millivolts / 1000, kitprog_handle->millivolts % 1000);
 
 	return ERROR_OK;
 }
@@ -374,6 +363,31 @@ static int kitprog_get_millivolts(void)
 		return ERROR_FAIL;
 
 	kitprog_handle->millivolts = (data[4] << 8) | data[3];
+
+	return ERROR_OK;
+}
+
+static int kitprog_get_info(void)
+{
+	/* Get the device version information */
+	if (kitprog_get_version() == ERROR_OK) {
+		LOG_INFO("KitProg v%u.%02u",
+			kitprog_handle->major_version, kitprog_handle->minor_version);
+		LOG_INFO("Hardware version: %u",
+			kitprog_handle->hardware_version);
+	} else {
+		LOG_ERROR("Failed to get KitProg version");
+		return ERROR_FAIL;
+	}
+
+	/* Get the current reported target voltage */
+	if (kitprog_get_millivolts() == ERROR_OK) {
+		LOG_INFO("VTARG = %u.%03u V",
+			kitprog_handle->millivolts / 1000, kitprog_handle->millivolts % 1000);
+	} else {
+		LOG_ERROR("Failed to get target voltage");
+		return ERROR_FAIL;
+	}
 
 	return ERROR_OK;
 }
@@ -657,25 +671,9 @@ static void kitprog_swd_queue_cmd(uint8_t cmd, uint32_t *dst, uint32_t data)
 
 COMMAND_HANDLER(kitprog_handle_info_command)
 {
-	if (kitprog_get_version() == ERROR_OK) {
-		LOG_INFO("KitProg v%u.%02u",
-			kitprog_handle->major_version, kitprog_handle->minor_version);
-		LOG_INFO("Hardware version: %u",
-			kitprog_handle->hardware_version);
-	} else {
-		LOG_ERROR("Failed to get KitProg version");
-		return ERROR_FAIL;
-	}
+	int retval = kitprog_get_info();
 
-	if (kitprog_get_millivolts() == ERROR_OK) {
-		LOG_INFO("VTARG = %u.%03u V",
-			kitprog_handle->millivolts / 1000, kitprog_handle->millivolts % 1000);
-	} else {
-		LOG_ERROR("Failed to get target voltage");
-		return ERROR_FAIL;
-	}
-
-	return ERROR_OK;
+	return retval;
 }
 
 COMMAND_HANDLER(kitprog_handle_reset_target_command)
