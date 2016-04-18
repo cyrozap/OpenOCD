@@ -131,9 +131,7 @@ static int kitprog_get_status(void);
 static int kitprog_set_unknown(void);
 static int kitprog_acquire_psoc(uint8_t psoc_type, uint8_t acquire_mode,
 		uint8_t max_attempts);
-#if 0
 static int kitprog_reset_target(void);
-#endif
 
 static int kitprog_swd_reset(void);
 
