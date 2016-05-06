@@ -202,6 +202,7 @@ m4_define([ADAPTER_OPT], [m4_translit(ADAPTER_ARG($1), [_], [-])])
 m4_define([USB1_ADAPTERS],
 	[[[ftdi], [MPSSE mode of FTDI based devices], [FTDI]],
 	[[jlink], [Segger J-Link JTAG Programmer], [JLINK]],
+	[[kitprog], [Cypress KitProg Programmer], [KITPROG]],
 	[[stlink], [ST-Link JTAG Programmer], [HLADAPTER_STLINK]],
 	[[ti_icdi], [TI ICDI JTAG Programmer], [HLADAPTER_ICDI]],
 	[[ulink], [Keil ULINK JTAG Programmer], [ULINK]],
@@ -219,8 +220,7 @@ m4_define([USB0_ADAPTERS],
 	[[armjtagew], [Olimex ARM-JTAG-EW Programmer], [ARMJTAGEW]]])
 
 m4_define([HIDAPI_ADAPTERS],
-	[[[cmsis_dap], [CMSIS-DAP Compliant Debugger], [CMSIS_DAP]],
-	[[kitprog], [Cypress KitProg Programmer], [KITPROG]]])
+	[[[cmsis_dap], [CMSIS-DAP Compliant Debugger], [CMSIS_DAP]]])
 
 #========================================
 # FTD2XXX support comes in 4 forms.
@@ -1231,7 +1231,7 @@ AM_CONDITIONAL([IS_WIN32], [test $is_win32 = yes])
 AM_CONDITIONAL([IS_DARWIN], [test $is_darwin = yes])
 AM_CONDITIONAL([BITQ], [test $build_bitq = yes])
 AM_CONDITIONAL([CMSIS_DAP], [test $use_hidapi = yes])
-AM_CONDITIONAL([KITPROG], [test $use_hidapi = yes])
+AM_CONDITIONAL([KITPROG], [test $use_libusb1 = yes])
 
 AM_CONDITIONAL([MINIDRIVER], [test $build_minidriver = yes])
 AM_CONDITIONAL([MINIDRIVER_DUMMY], [test $build_minidriver_dummy = yes])

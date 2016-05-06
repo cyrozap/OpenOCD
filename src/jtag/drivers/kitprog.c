@@ -38,8 +38,6 @@
 
 #include <stdint.h>
 
-#include <hidapi.h>
-
 #include <jtag/interface.h>
 #include <jtag/swd.h>
 #include <jtag/commands.h>
@@ -49,8 +47,10 @@
 #define VID 0x04b4
 #define PID 0xf139
 
-#define EP_IN  1
-#define EP_OUT 2
+#define BULK_EP_IN  1
+#define BULK_EP_OUT 2
+#define HID_EP_IN   3
+#define HID_EP_OUT  4
 
 #define CONTROL_TYPE_READ  0x01
 #define CONTROL_TYPE_WRITE 0x02
@@ -91,7 +91,6 @@
 #define SWD_MAX_BUFFER_LENGTH 512
 
 struct kitprog {
-	hid_device *hid_handle;
 	struct jtag_libusb_device_handle *usb_handle;
 	uint16_t packet_size;
 	uint16_t packet_index;
@@ -283,50 +282,69 @@ static int kitprog_usb_open(void)
 		return ERROR_FAIL;
 	}
 
+	/* Try to detach hidraw kernel module */
+	int err = libusb_detach_kernel_driver(kitprog_handle->usb_handle, 0);
+	if (err != LIBUSB_SUCCESS && err != LIBUSB_ERROR_NOT_FOUND
+			&& err != LIBUSB_ERROR_NOT_SUPPORTED) {
+		LOG_ERROR("libusb_detach_kernel_driver() failed with %s", libusb_error_name(err));
+		return ERROR_FAIL;
+	}
+
+	/* Claim the KitBridge (HID) interface */
+	if (jtag_libusb_claim_interface(kitprog_handle->usb_handle, 0) != ERROR_OK) {
+		LOG_ERROR("Failed to claim KitProg Programmer (bulk transfer) interface");
+		return ERROR_FAIL;
+	}
+
 	/* Claim the KitProg Programmer (bulk transfer) interface */
 	if (jtag_libusb_claim_interface(kitprog_handle->usb_handle, 1) != ERROR_OK) {
 		LOG_ERROR("Failed to claim KitProg Programmer (bulk transfer) interface");
 		return ERROR_FAIL;
 	}
 
-	/* Get the serial number for the device so the HID interface will point to
-	 * the same device.
-	 */
+	/* Get the serial number for the device */
 	if (kitprog_get_usb_serial() != ERROR_OK)
 		LOG_ERROR("Failed to get KitProg serial number");
-
-	/* Use HID for the KitBridge interface */
-	kitprog_handle->hid_handle = hid_open(VID, PID, kitprog_handle->serial);
-	if (kitprog_handle->hid_handle == NULL) {
-		LOG_ERROR("Failed to open KitBridge (HID) interface");
-		return ERROR_FAIL;
-	}
 
 	return ERROR_OK;
 }
 
 static void kitprog_usb_close(void)
 {
-	hid_close(kitprog_handle->hid_handle);
-	hid_exit();
-
 	jtag_libusb_close(kitprog_handle->usb_handle);
 }
 
 static int kitprog_hid_command(uint8_t *command, size_t command_length,
 		uint8_t *data, size_t data_length)
 {
-	int ret;
+	int err;
+	int transferred = 0;
+	uint8_t write_buffer[64] = {0};
 
-	ret = hid_write(kitprog_handle->hid_handle, command, command_length);
-	if (ret < 0) {
-		LOG_DEBUG("HID write returned %i", ret);
+	memcpy(write_buffer, command, command_length);
+	err = libusb_interrupt_transfer(kitprog_handle->usb_handle,
+		HID_EP_OUT | LIBUSB_ENDPOINT_OUT,
+		write_buffer, sizeof write_buffer, &transferred, 0);
+	if (err < 0) {
+		LOG_ERROR("libusb_interrupt_transfer() failed with %s", libusb_error_name(err));
 		return ERROR_FAIL;
 	}
 
-	ret = hid_read(kitprog_handle->hid_handle, data, data_length);
-	if (ret < 0) {
-		LOG_DEBUG("HID read returned %i", ret);
+	if (transferred == 0) {
+		LOG_ERROR("Zero bytes transferred");
+		return ERROR_FAIL;
+	}
+
+	err = libusb_interrupt_transfer(kitprog_handle->usb_handle,
+		HID_EP_IN | LIBUSB_ENDPOINT_IN,
+		data, data_length, &transferred, 0);
+	if (err < 0) {
+		LOG_ERROR("libusb_interrupt_transfer() failed with %s", libusb_error_name(err));
+		return ERROR_FAIL;
+	}
+
+	if (transferred == 0) {
+		LOG_ERROR("Zero bytes transferred");
 		return ERROR_FAIL;
 	}
 
@@ -600,7 +618,7 @@ static int kitprog_swd_run_queue(void)
 		}
 
 		ret = jtag_libusb_bulk_write(kitprog_handle->usb_handle,
-				EP_OUT, (char *)buffer, write_count, 0);
+				BULK_EP_OUT, (char *)buffer, write_count, 0);
 		if (ret > 0) {
 			queued_retval = ERROR_OK;
 		} else {
@@ -613,7 +631,7 @@ static int kitprog_swd_run_queue(void)
 		 * doesn't like bulk reads of fewer than 62 bytes. (?!?!)
 		 */
 		ret = jtag_libusb_bulk_write(kitprog_handle->usb_handle,
-				EP_IN | LIBUSB_ENDPOINT_IN, (char *)buffer,
+				BULK_EP_IN | LIBUSB_ENDPOINT_IN, (char *)buffer,
 				SWD_MAX_BUFFER_LENGTH, 0);
 		if (ret > 0) {
 			/* Handle garbage data by offsetting the initial read index */
