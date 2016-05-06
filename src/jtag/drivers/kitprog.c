@@ -446,6 +446,7 @@ static int kitprog_get_status(void)
 			CONTROL_TYPE_READ,
 			(CONTROL_MODE_POLL_PROGRAMMER_STATUS << 8) | CONTROL_COMMAND_PROGRAM,
 			0, &status, 1, 0);
+		jtag_sleep(1000);
 	}
 
 	if (transferred == 0) {
