@@ -133,6 +133,7 @@ static int kitprog_acquire_psoc(uint8_t psoc_type, uint8_t acquire_mode,
 		uint8_t max_attempts);
 static int kitprog_reset_target(void);
 
+static int kitprog_swd_sync(void);
 static int kitprog_swd_reset(void);
 
 static int kitprog_swd_run_queue(void);
@@ -155,6 +156,10 @@ static int kitprog_init(void)
 
 	/* I have no idea what this does */
 	if (kitprog_set_unknown() != ERROR_OK)
+		return ERROR_FAIL;
+
+	/* SWD won't work unless we do this */
+	if (kitprog_swd_sync() != ERROR_OK)
 		return ERROR_FAIL;
 
 	/* Set the protocol to SWD */
@@ -520,6 +525,30 @@ static int kitprog_reset_target(void)
 		LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 		CONTROL_TYPE_WRITE,
 		(CONTROL_MODE_RESET_TARGET << 8) | CONTROL_COMMAND_PROGRAM,
+		0, &status, 1, 0);
+
+	if (transferred == 0) {
+		LOG_DEBUG("Zero bytes transferred");
+		return ERROR_FAIL;
+	}
+
+	if (status != PROGRAMMER_OK_ACK) {
+		LOG_DEBUG("Programmer did not respond OK");
+		return ERROR_FAIL;
+	}
+
+	return ERROR_OK;
+}
+
+static int kitprog_swd_sync(void)
+{
+	int transferred;
+	char status = PROGRAMMER_NOK_NACK;
+
+	transferred = jtag_libusb_control_transfer(kitprog_handle->usb_handle,
+		LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
+		CONTROL_TYPE_WRITE,
+		(CONTROL_MODE_SYNCHRONIZE_TRANSFER << 8) | CONTROL_COMMAND_PROGRAM,
 		0, &status, 1, 0);
 
 	if (transferred == 0) {
