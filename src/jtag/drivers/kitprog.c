@@ -109,6 +109,7 @@ struct pending_transfer_result {
 };
 
 static char *kitprog_serial;
+static bool kitprog_init_acquire_psoc;
 
 static int pending_transfer_count, pending_queue_len;
 static struct pending_transfer_result *pending_transfers;
@@ -143,6 +144,8 @@ static int kitprog_swd_switch_seq(enum swd_special_seq seq);
 
 static int kitprog_init(void)
 {
+	int retval;
+
 	kitprog_handle = malloc(sizeof(struct kitprog));
 
 	if (kitprog_usb_open() != ERROR_OK) {
@@ -170,33 +173,33 @@ static int kitprog_init(void)
 	if (kitprog_swd_reset() != ERROR_OK)
 		return ERROR_FAIL;
 
-	/* To enable the SWDIO and SWCLK pins as outputs, the acquire function
-	 * *must* be run with a max_attempts >= 1.
-	 */
+	if (kitprog_init_acquire_psoc) {
+		/* Try to acquire any device that will respond */
+		do {
+			retval = kitprog_acquire_psoc(DEVICE_PSOC4, ACQUIRE_MODE_RESET, 3);
+			if (retval != ERROR_OK)
+				return retval;
 
-	/* Here we try to acquire any device that will respond */
-	do {
-		if (kitprog_acquire_psoc(DEVICE_PSOC4, ACQUIRE_MODE_RESET, 3) != ERROR_OK)
-			return ERROR_FAIL;
+			if (kitprog_get_status() == ERROR_OK)
+				break;
 
-		if (kitprog_get_status() == ERROR_OK)
-			break;
+			retval = kitprog_acquire_psoc(DEVICE_UNKNOWN, ACQUIRE_MODE_RESET, 3);
+			if (retval != ERROR_OK)
+				return retval;
 
-		if (kitprog_acquire_psoc(DEVICE_UNKNOWN, ACQUIRE_MODE_RESET, 3) != ERROR_OK)
-			return ERROR_FAIL;
+			if (kitprog_get_status() == ERROR_OK)
+				break;
 
-		if (kitprog_get_status() == ERROR_OK)
-			break;
+			retval = kitprog_acquire_psoc(DEVICE_PSOC5, ACQUIRE_MODE_RESET, 3);
+			if (retval != ERROR_OK)
+				return retval;
 
-		if (kitprog_acquire_psoc(DEVICE_PSOC5, ACQUIRE_MODE_RESET, 3) != ERROR_OK)
-			return ERROR_FAIL;
+			if (kitprog_get_status() == ERROR_OK)
+				break;
 
-		if (kitprog_get_status() == ERROR_OK)
-			break; else {
 			LOG_ERROR("No PSoC devices found");
-			return ERROR_FAIL;
-		}
-	} while (0);
+		} while (0);
+	}
 
 	/* Allocate packet buffers and queues */
 	kitprog_handle->packet_buffer = malloc(SWD_MAX_BUFFER_LENGTH);
@@ -748,6 +751,13 @@ COMMAND_HANDLER(kitprog_handle_serial_command)
 	return ERROR_OK;
 }
 
+COMMAND_HANDLER(kitprog_handle_acquire_psoc_command)
+{
+	kitprog_init_acquire_psoc = true;
+
+	return ERROR_OK;
+}
+
 static const struct command_registration kitprog_subcommand_handlers[] = {
 	{
 		.name = "info",
@@ -780,6 +790,13 @@ static const struct command_registration kitprog_command_handlers[] = {
 		.mode = COMMAND_CONFIG,
 		.help = "set the serial number of the adapter",
 		.usage = "serial_string",
+	},
+	{
+		.name = "kitprog_acquire_psoc",
+		.handler = &kitprog_handle_acquire_psoc_command,
+		.mode = COMMAND_CONFIG,
+		.help = "try to aquire a PSoC during init",
+		.usage = "",
 	},
 	COMMAND_REGISTRATION_DONE
 };
