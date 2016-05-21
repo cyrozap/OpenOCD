@@ -729,7 +729,16 @@ COMMAND_HANDLER(kitprog_handle_info_command)
 
 COMMAND_HANDLER(kitprog_handle_reset_target_command)
 {
-	int retval = kitprog_reset_target();
+	int retval;
+
+	retval = kitprog_reset_target();
+	if (retval != ERROR_OK)
+		return retval;
+
+	/* Since the previous command also disables SWCLK output, we need to send an
+	 * SWD bus reset command to re-enable it.
+	 */
+	retval = kitprog_swd_reset();
 
 	return retval;
 }
