@@ -208,7 +208,6 @@ static int kitprog_init(void)
 	pending_queue_len = SWD_MAX_BUFFER_LENGTH / 5;
 	pending_transfers = malloc(pending_queue_len * sizeof(*pending_transfers));
 	if (!pending_transfers) {
-		LOG_ERROR("Unable to allocate memory for KitProg queue");
 		return ERROR_FAIL;
 	}
 
@@ -264,7 +263,6 @@ static int kitprog_get_usb_serial(void)
 	/* Allocate memory for the serial number */
 	kitprog_handle->serial = calloc(retval + 1, sizeof(wchar_t));
 	if (kitprog_handle->serial == NULL) {
-		LOG_ERROR("unable to allocate memory for serial");
 		return ERROR_FAIL;
 	}
 
@@ -312,7 +310,7 @@ static int kitprog_usb_open(void)
 
 	/* Get the serial number for the device */
 	if (kitprog_get_usb_serial() != ERROR_OK)
-		LOG_ERROR("Failed to get KitProg serial number");
+		LOG_WARNING("Failed to get KitProg serial number");
 
 	return ERROR_OK;
 }
@@ -368,7 +366,7 @@ static int kitprog_get_version(void)
 
 	ret = kitprog_hid_command(command, sizeof command, data, sizeof data);
 	if (ret != ERROR_OK)
-		return ERROR_FAIL;
+		return ret;
 
 	kitprog_handle->hardware_version = data[1];
 	kitprog_handle->minor_version = data[2];
@@ -655,7 +653,7 @@ static int kitprog_swd_run_queue(void)
 		if (ret > 0) {
 			queued_retval = ERROR_OK;
 		} else {
-			LOG_DEBUG("Bulk write failed");
+			LOG_ERROR("Bulk write failed");
 			queued_retval = ERROR_FAIL;
 			break;
 		}
@@ -672,7 +670,7 @@ static int kitprog_swd_run_queue(void)
 				read_index = ret - read_count;
 			queued_retval = ERROR_OK;
 		} else {
-			LOG_DEBUG("Bulk read failed");
+			LOG_ERROR("Bulk read failed");
 			queued_retval = ERROR_FAIL;
 			break;
 		}
@@ -749,12 +747,12 @@ COMMAND_HANDLER(kitprog_handle_serial_command)
 		size_t len = strlen(CMD_ARGV[0]);
 		kitprog_serial = calloc(len + 1, sizeof(char));
 		if (kitprog_serial == NULL) {
-			LOG_ERROR("unable to allocate memory");
-			return ERROR_OK;
+			return ERROR_FAIL;
 		}
 		strncpy(kitprog_serial, CMD_ARGV[0], len + 1);
 	} else {
 		LOG_ERROR("expected exactly one argument to kitprog_serial <serial-number>");
+		return ERROR_FAIL;
 	}
 
 	return ERROR_OK;
