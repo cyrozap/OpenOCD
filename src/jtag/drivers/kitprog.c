@@ -207,9 +207,8 @@ static int kitprog_init(void)
 
 	pending_queue_len = SWD_MAX_BUFFER_LENGTH / 5;
 	pending_transfers = malloc(pending_queue_len * sizeof(*pending_transfers));
-	if (!pending_transfers) {
+	if (!pending_transfers)
 		return ERROR_FAIL;
-	}
 
 	return ERROR_OK;
 }
@@ -262,9 +261,8 @@ static int kitprog_get_usb_serial(void)
 
 	/* Allocate memory for the serial number */
 	kitprog_handle->serial = calloc(retval + 1, sizeof(wchar_t));
-	if (kitprog_handle->serial == NULL) {
+	if (kitprog_handle->serial == NULL)
 		return ERROR_FAIL;
-	}
 
 	/* Convert the ASCII serial number into a (wchar_t *) */
 	if (mbstowcs(kitprog_handle->serial, desc_string, retval + 1) == (size_t)-1) {
@@ -384,7 +382,7 @@ static int kitprog_get_millivolts(void)
 
 	ret = kitprog_hid_command(command, sizeof command, data, sizeof data);
 	if (ret != ERROR_OK)
-		return ERROR_FAIL;
+		return ret;
 
 	kitprog_handle->millivolts = (data[4] << 8) | data[3];
 
@@ -746,9 +744,8 @@ COMMAND_HANDLER(kitprog_handle_serial_command)
 	if (CMD_ARGC == 1) {
 		size_t len = strlen(CMD_ARGV[0]);
 		kitprog_serial = calloc(len + 1, sizeof(char));
-		if (kitprog_serial == NULL) {
+		if (kitprog_serial == NULL)
 			return ERROR_FAIL;
-		}
 		strncpy(kitprog_serial, CMD_ARGV[0], len + 1);
 	} else {
 		LOG_ERROR("expected exactly one argument to kitprog_serial <serial-number>");
