@@ -199,6 +199,33 @@ static int kitprog_init(void)
 
 			LOG_ERROR("No PSoC devices found");
 		} while (0);
+
+		jtag_sleep(1000);
+
+		do {
+			retval = kitprog_acquire_psoc(DEVICE_PSOC4, ACQUIRE_MODE_RESET, 3);
+			if (retval != ERROR_OK)
+				return retval;
+
+			if (kitprog_get_status() == ERROR_OK)
+				break;
+
+			retval = kitprog_acquire_psoc(DEVICE_UNKNOWN, ACQUIRE_MODE_RESET, 3);
+			if (retval != ERROR_OK)
+				return retval;
+
+			if (kitprog_get_status() == ERROR_OK)
+				break;
+
+			retval = kitprog_acquire_psoc(DEVICE_PSOC5, ACQUIRE_MODE_RESET, 3);
+			if (retval != ERROR_OK)
+				return retval;
+
+			if (kitprog_get_status() == ERROR_OK)
+				break;
+
+			LOG_ERROR("No PSoC devices found");
+		} while (0);
 	}
 
 	/* Allocate packet buffers and queues */
@@ -626,6 +653,25 @@ static int kitprog_swd_run_queue(void)
 		for (int i = 0; i < pending_transfer_count; i++) {
 			uint8_t cmd = pending_transfers[i].cmd;
 			uint32_t data = pending_transfers[i].data;
+
+			/* When proper WAIT handling is implemented in the
+			 * common SWD framework, this kludge can be
+			 * removed. However, this might lead to minor
+			 * performance degradation as the adapter wouldn't be
+			 * able to automatically retry anything (because ARM
+			 * has forgotten to implement sticky error flags
+			 * clearing). See also comments regarding
+			 * cmsis_dap_cmd_DAP_TFER_Configure() and
+			 * cmsis_dap_cmd_DAP_SWD_Configure() in
+			 * cmsis_dap_init().
+			 */
+			if (!(cmd & SWD_CMD_RnW) &&
+			    !(cmd & SWD_CMD_APnDP) &&
+			    (cmd & SWD_CMD_A32) >> 1 == DP_CTRL_STAT &&
+			    (data & CORUNDETECT)) {
+				LOG_DEBUG("refusing to enable sticky overrun detection");
+				data &= ~CORUNDETECT;
+			}
 
 #if 0
 			LOG_DEBUG("%s %s reg %x %"PRIx32,
