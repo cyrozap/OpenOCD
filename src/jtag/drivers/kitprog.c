@@ -323,7 +323,7 @@ static int kitprog_usb_open(void)
 
 	/* Claim the KitBridge (HID) interface */
 	if (jtag_libusb_claim_interface(kitprog_handle->usb_handle, 0) != ERROR_OK) {
-		LOG_ERROR("Failed to claim KitProg Programmer (bulk transfer) interface");
+		LOG_ERROR("Failed to claim KitBridge (HID) interface");
 		return ERROR_FAIL;
 	}
 
