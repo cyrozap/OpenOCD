@@ -202,7 +202,6 @@ m4_define([ADAPTER_OPT], [m4_translit(ADAPTER_ARG($1), [_], [-])])
 m4_define([USB1_ADAPTERS],
 	[[[ftdi], [MPSSE mode of FTDI based devices], [FTDI]],
 	[[jlink], [Segger J-Link JTAG Programmer], [JLINK]],
-	[[kitprog], [Cypress KitProg Programmer], [KITPROG]],
 	[[stlink], [ST-Link JTAG Programmer], [HLADAPTER_STLINK]],
 	[[ti_icdi], [TI ICDI JTAG Programmer], [HLADAPTER_ICDI]],
 	[[ulink], [Keil ULINK JTAG Programmer], [ULINK]],
@@ -221,6 +220,9 @@ m4_define([USB0_ADAPTERS],
 
 m4_define([HIDAPI_ADAPTERS],
 	[[[cmsis_dap], [CMSIS-DAP Compliant Debugger], [CMSIS_DAP]]])
+
+m4_define([HIDAPI_USB1_ADAPTERS],
+	[[[kitprog], [Cypress KitProg Programmer], [KITPROG]]])
 
 #========================================
 # FTD2XXX support comes in 4 forms.
@@ -380,7 +382,7 @@ m4_define([AC_ARG_ADAPTERS], [
   ])
 ])
 
-AC_ARG_ADAPTERS([USB1_ADAPTERS, USB_ADAPTERS, USB0_ADAPTERS, HIDAPI_ADAPTERS], [auto])
+AC_ARG_ADAPTERS([USB1_ADAPTERS, USB_ADAPTERS, USB0_ADAPTERS, HIDAPI_ADAPTERS, HIDAPI_USB1_ADAPTERS], [auto])
 
 AC_ARG_ENABLE([parport],
   AS_HELP_STRING([--enable-parport], [Enable building the pc parallel port driver]),
@@ -1181,6 +1183,7 @@ PROCESS_ADAPTERS([USB1_ADAPTERS], [$use_libusb1 = yes], [libusb-1.x])
 PROCESS_ADAPTERS([USB_ADAPTERS], [$use_libusb1 = yes -o $use_libusb0 = yes], [libusb-1.x or libusb-0.1])
 PROCESS_ADAPTERS([USB0_ADAPTERS], [$use_libusb0 = yes], [libusb-0.1])
 PROCESS_ADAPTERS([HIDAPI_ADAPTERS], [$use_hidapi = yes], [hidapi])
+PROCESS_ADAPTERS([HIDAPI_USB1_ADAPTERS], [$use_hidapi = yes -a $use_libusb1 = yes], [hidapi and libusb-1.x])
 
 if test $enable_stlink != no -o $enable_ti_icdi != no; then
 	AC_DEFINE([BUILD_HLADAPTER], [1], [1 if you want the High Level JTAG driver.])
@@ -1231,7 +1234,7 @@ AM_CONDITIONAL([IS_WIN32], [test $is_win32 = yes])
 AM_CONDITIONAL([IS_DARWIN], [test $is_darwin = yes])
 AM_CONDITIONAL([BITQ], [test $build_bitq = yes])
 AM_CONDITIONAL([CMSIS_DAP], [test $use_hidapi = yes])
-AM_CONDITIONAL([KITPROG], [test $use_libusb1 = yes])
+AM_CONDITIONAL([KITPROG], [test $use_hidapi = yes -a $use_libusb1 = yes])
 
 AM_CONDITIONAL([MINIDRIVER], [test $build_minidriver = yes])
 AM_CONDITIONAL([MINIDRIVER_DUMMY], [test $build_minidriver_dummy = yes])
@@ -1317,7 +1320,8 @@ echo
 echo
 echo OpenOCD configuration summary
 echo --------------------------------------------------
-m4_foreach([adapter], [USB1_ADAPTERS, USB_ADAPTERS, USB0_ADAPTERS, HIDAPI_ADAPTERS],
+m4_foreach([adapter], [USB1_ADAPTERS, USB_ADAPTERS, USB0_ADAPTERS,
+	HIDAPI_ADAPTERS, HIDAPI_USB1_ADAPTERS],
 	[s=m4_format(["%-40s"], ADAPTER_DESC([adapter]))
 	case $ADAPTER_VAR([adapter]) in
 		auto)
