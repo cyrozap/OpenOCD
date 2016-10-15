@@ -744,25 +744,114 @@ static void kitprog_swd_queue_cmd(uint8_t cmd, uint32_t *dst, uint32_t data)
 	pending_transfer_count++;
 }
 
+static void kitprog_execute_reset(struct jtag_command *cmd)
+{
+	int retval = ERROR_OK;
+
+	if (cmd->cmd.reset->srst == 1) {
+		if (kitprog_init_acquire_psoc) {
+			/* Try to acquire any device that will respond */
+			do {
+				retval = kitprog_acquire_psoc(DEVICE_PSOC4, ACQUIRE_MODE_RESET, 3);
+				if (retval != ERROR_OK)
+					break;
+
+				if (kitprog_get_status() == ERROR_OK)
+					break;
+
+				retval = kitprog_acquire_psoc(DEVICE_UNKNOWN, ACQUIRE_MODE_RESET, 3);
+				if (retval != ERROR_OK)
+					break;
+
+				if (kitprog_get_status() == ERROR_OK)
+					break;
+
+				retval = kitprog_acquire_psoc(DEVICE_PSOC5, ACQUIRE_MODE_RESET, 3);
+				if (retval != ERROR_OK)
+					break;
+
+				if (kitprog_get_status() == ERROR_OK)
+					break;
+
+				LOG_ERROR("No PSoC devices found");
+			} while (0);
+
+			jtag_sleep(1000);
+
+			do {
+				retval = kitprog_acquire_psoc(DEVICE_PSOC4, ACQUIRE_MODE_RESET, 3);
+				if (retval != ERROR_OK)
+					break;
+
+				if (kitprog_get_status() == ERROR_OK)
+					break;
+
+				retval = kitprog_acquire_psoc(DEVICE_UNKNOWN, ACQUIRE_MODE_RESET, 3);
+				if (retval != ERROR_OK)
+					break;
+
+				if (kitprog_get_status() == ERROR_OK)
+					break;
+
+				retval = kitprog_acquire_psoc(DEVICE_PSOC5, ACQUIRE_MODE_RESET, 3);
+				if (retval != ERROR_OK)
+					break;
+
+				if (kitprog_get_status() == ERROR_OK)
+					break;
+
+				LOG_ERROR("No PSoC devices found");
+			} while (0);
+		} else {
+			retval = kitprog_reset_target();
+			if (retval == ERROR_OK) {
+				/* Since the previous command also disables SWCLK output, we need to send an
+				 * SWD bus reset command to re-enable it.
+				 */
+				retval = kitprog_swd_reset();
+			}
+		}
+	}
+
+	if (retval != ERROR_OK)
+		LOG_ERROR("KitProg: Interface reset failed");
+}
+
+static void kitprog_execute_sleep(struct jtag_command *cmd)
+{
+	jtag_sleep(cmd->cmd.sleep->us);
+}
+
+static void kitprog_execute_command(struct jtag_command *cmd)
+{
+	switch (cmd->type) {
+		case JTAG_RESET:
+			kitprog_execute_reset(cmd);
+			break;
+		case JTAG_SLEEP:
+			kitprog_execute_sleep(cmd);
+			break;
+		default:
+			LOG_ERROR("BUG: unknown JTAG command type encountered");
+			exit(-1);
+	}
+}
+
+static int kitprog_execute_queue(void)
+{
+	struct jtag_command *cmd = jtag_command_queue;
+
+	while (cmd != NULL) {
+		kitprog_execute_command(cmd);
+		cmd = cmd->next;
+	}
+
+	return ERROR_OK;
+}
+
 COMMAND_HANDLER(kitprog_handle_info_command)
 {
 	int retval = kitprog_get_info();
-
-	return retval;
-}
-
-COMMAND_HANDLER(kitprog_handle_reset_target_command)
-{
-	int retval;
-
-	retval = kitprog_reset_target();
-	if (retval != ERROR_OK)
-		return retval;
-
-	/* Since the previous command also disables SWCLK output, we need to send an
-	 * SWD bus reset command to re-enable it.
-	 */
-	retval = kitprog_swd_reset();
 
 	return retval;
 }
@@ -797,13 +886,6 @@ static const struct command_registration kitprog_subcommand_handlers[] = {
 		.mode = COMMAND_EXEC,
 		.usage = "",
 		.help = "show KitProg info",
-	},
-	{
-		.name = "reset_target",
-		.handler = &kitprog_handle_reset_target_command,
-		.mode = COMMAND_EXEC,
-		.usage = "",
-		.help = "reset the connected device using the KitProg's built-in target reset function",
 	},
 	COMMAND_REGISTRATION_DONE
 };
@@ -848,6 +930,7 @@ struct jtag_interface kitprog_interface = {
 	.commands = kitprog_command_handlers,
 	.transports = kitprog_transports,
 	.swd = &kitprog_swd,
+	.execute_queue = kitprog_execute_queue,
 	.init = kitprog_init,
 	.quit = kitprog_quit
 };
