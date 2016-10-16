@@ -714,6 +714,14 @@ static int kitprog_swd_run_queue(void)
 
 				read_index += 4;
 			}
+
+			uint8_t ack = buffer[read_index] & 0x07;
+			if (ack != SWD_ACK_OK || (buffer[read_index] & 0x08)) {
+				LOG_DEBUG("SWD ack not OK: %d %s", i,
+					  ack == SWD_ACK_WAIT ? "WAIT" : ack == SWD_ACK_FAULT ? "FAULT" : "JUNK");
+				queued_retval = ack == SWD_ACK_WAIT ? ERROR_WAIT : ERROR_FAIL;
+				break;
+			}
 			read_index++;
 		}
 	} while (0);
