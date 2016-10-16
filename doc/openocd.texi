@@ -2798,6 +2798,30 @@ As a configuration command, it can be used only before 'init'.
 @end deffn
 @end deffn
 
+@deffn {Interface Driver} {kitprog}
+This driver is for Cypress Semiconductor's KitProg adapters. The KitProg is an
+SWD-only adapter that is designed to be used with Cypress' PSoC and PRoC device
+families, but it may be possible to use it with other devices. If you are using
+this adapter with a PSoC or a PRoC, you may need to use add
+@command{kitprog_acquire_psoc} to your configuration script.
+
+@deffn {Config Command} {kitprog_acquire_psoc}
+If the KitProg is connected to a Cypress PSoC/PRoC device and the PSoC SWD pins
+are set to either JTAG or GPIO mode, you need to use this command to indicate
+that an acquisition sequence needs to be run on target init and reset.
+@end deffn
+
+@deffn {Config Command} {kitprog_serial} [serial]
+Select a KitProg device by its @var{serial}. If left unspecified, the first
+device detected by OpenOCD will be used.
+@end deffn
+
+@deffn {Command} {kitprog info}
+Display various adapter information, like the hardware version, firmware
+version, and target voltage.
+@end deffn
+@end deffn
+
 @deffn {Interface Driver} {parport}
 Supports PC parallel port bit-banging cables:
 Wigglers, PLD download cable, and more.
