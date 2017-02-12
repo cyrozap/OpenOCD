@@ -148,6 +148,8 @@ static int kitprog_init(void)
 	int retval;
 
 	kitprog_handle = malloc(sizeof(struct kitprog));
+	if (kitprog_handle == NULL)
+		return ERROR_FAIL;
 
 	if (kitprog_usb_open() != ERROR_OK) {
 		LOG_ERROR("Can't find a KitProg device! Please check device connections and permissions.");
@@ -230,12 +232,14 @@ static int kitprog_init(void)
 	}
 
 	/* Allocate packet buffers and queues */
-	kitprog_handle->packet_buffer = malloc(SWD_MAX_BUFFER_LENGTH);
 	kitprog_handle->packet_size = SWD_MAX_BUFFER_LENGTH;
+	kitprog_handle->packet_buffer = malloc(SWD_MAX_BUFFER_LENGTH);
+	if (kitprog_handle->packet_buffer == NULL)
+		return ERROR_FAIL;
 
 	pending_queue_len = SWD_MAX_BUFFER_LENGTH / 5;
 	pending_transfers = malloc(pending_queue_len * sizeof(*pending_transfers));
-	if (!pending_transfers)
+	if (pending_transfers == NULL)
 		return ERROR_FAIL;
 
 	return ERROR_OK;
@@ -245,7 +249,18 @@ static int kitprog_quit(void)
 {
 	kitprog_usb_close();
 
-	free(kitprog_handle);
+	if (kitprog_handle->packet_buffer != NULL)
+		free(kitprog_handle->packet_buffer);
+	if (kitprog_handle->serial != NULL)
+		free(kitprog_handle->serial);
+	if (kitprog_handle != NULL)
+		free(kitprog_handle);
+
+	if (kitprog_serial != NULL)
+		free(kitprog_serial);
+
+	if (pending_transfers != NULL)
+		free(pending_transfers);
 
 	return ERROR_OK;
 }
