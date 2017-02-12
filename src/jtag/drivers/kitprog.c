@@ -544,7 +544,7 @@ static int kitprog_generic_acquire(void)
 	 * The PSoC 4 series appears to be unaffected by this issue.
 	 */
 	for (int i = 0; i < 2; i++) {
-		for (uint8_t j = 0; j < 3 && acquire_count == i; j++) {
+		for (uint8_t j = 0; j < sizeof devices && acquire_count == i; j++) {
 			retval = kitprog_acquire_psoc(devices[j], ACQUIRE_MODE_RESET, 3);
 			if (retval != ERROR_OK) {
 				LOG_DEBUG("Aquisition function failed for device 0x%02x.", devices[j]);
