@@ -664,9 +664,9 @@ static int kitprog_swd_run_queue(void)
 			 * cmsis_dap_init().
 			 */
 			if (!(cmd & SWD_CMD_RnW) &&
-			    !(cmd & SWD_CMD_APnDP) &&
-			    (cmd & SWD_CMD_A32) >> 1 == DP_CTRL_STAT &&
-			    (data & CORUNDETECT)) {
+				!(cmd & SWD_CMD_APnDP) &&
+				(cmd & SWD_CMD_A32) >> 1 == DP_CTRL_STAT &&
+				(data & CORUNDETECT)) {
 				LOG_DEBUG("refusing to enable sticky overrun detection");
 				data &= ~CORUNDETECT;
 			}
