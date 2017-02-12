@@ -522,7 +522,7 @@ static int kitprog_reset_target(void)
 
 static int kitprog_generic_acquire(void)
 {
-	const uint8_t const devices[] = {DEVICE_PSOC4, DEVICE_UNKNOWN, DEVICE_PSOC5};
+	const uint8_t devices[] = {DEVICE_PSOC4, DEVICE_UNKNOWN, DEVICE_PSOC5};
 
 	int retval;
 	int acquire_count = 0;
