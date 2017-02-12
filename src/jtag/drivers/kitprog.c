@@ -135,6 +135,8 @@ static int kitprog_acquire_psoc(uint8_t psoc_type, uint8_t acquire_mode,
 		uint8_t max_attempts);
 static int kitprog_reset_target(void);
 
+static int kitprog_generic_acquire(void);
+
 static int kitprog_swd_sync(void);
 static int kitprog_swd_reset(void);
 
@@ -178,57 +180,12 @@ static int kitprog_init(void)
 
 	if (kitprog_init_acquire_psoc) {
 		/* Try to acquire any device that will respond */
-		do {
-			retval = kitprog_acquire_psoc(DEVICE_PSOC4, ACQUIRE_MODE_RESET, 3);
-			if (retval != ERROR_OK)
-				return retval;
-
-			if (kitprog_get_status() == ERROR_OK)
-				break;
-
-			retval = kitprog_acquire_psoc(DEVICE_UNKNOWN, ACQUIRE_MODE_RESET, 3);
-			if (retval != ERROR_OK)
-				return retval;
-
-			if (kitprog_get_status() == ERROR_OK)
-				break;
-
-			retval = kitprog_acquire_psoc(DEVICE_PSOC5, ACQUIRE_MODE_RESET, 3);
-			if (retval != ERROR_OK)
-				return retval;
-
-			if (kitprog_get_status() == ERROR_OK)
-				break;
-
+		retval = kitprog_generic_acquire();
+		if (retval != ERROR_OK) {
 			LOG_ERROR("No PSoC devices found");
-		} while (0);
+			return retval;
+		}
 
-		jtag_sleep(1000);
-
-		do {
-			retval = kitprog_acquire_psoc(DEVICE_PSOC4, ACQUIRE_MODE_RESET, 3);
-			if (retval != ERROR_OK)
-				return retval;
-
-			if (kitprog_get_status() == ERROR_OK)
-				break;
-
-			retval = kitprog_acquire_psoc(DEVICE_UNKNOWN, ACQUIRE_MODE_RESET, 3);
-			if (retval != ERROR_OK)
-				return retval;
-
-			if (kitprog_get_status() == ERROR_OK)
-				break;
-
-			retval = kitprog_acquire_psoc(DEVICE_PSOC5, ACQUIRE_MODE_RESET, 3);
-			if (retval != ERROR_OK)
-				return retval;
-
-			if (kitprog_get_status() == ERROR_OK)
-				break;
-
-			LOG_ERROR("No PSoC devices found");
-		} while (0);
 	}
 
 	/* Allocate packet buffers and queues */
@@ -563,6 +520,50 @@ static int kitprog_reset_target(void)
 	return ERROR_OK;
 }
 
+static int kitprog_generic_acquire(void)
+{
+	const uint8_t const devices[] = {DEVICE_PSOC4, DEVICE_UNKNOWN, DEVICE_PSOC5};
+
+	int retval;
+	int acquire_count = 0;
+
+	/* The PSoC 5LP seems to have a curious bug: After applying power to the
+	 * device but before running an acquisition sequence, if only one aquisition
+	 * sequence is run, the CPU will be halted and OpenOCD will be unable to
+	 * find the MEM-AP. In order to remedy that, after a short delay a second
+	 * acquisition sequence must be run. The strange part is, the second
+	 * sequence does not appear to require the correct device type to be
+	 * used, i.e., kitprog_acquire_psoc(DEVICE_PSOC5, ...) followed by
+	 * kitprog_acquire_psoc(DEVICE_PSOC4, ...) will enable OpenOCD to control
+	 * the device. Simply resetting the device with kitprog_reset_target()
+	 * (followed by kitprog_swd_reset() to re-enable SWD) in lieu of an
+	 * aquisition sequence will not work.
+	 *
+	 * PSoC Programmer does the same thing, so this may be a silicon bug.
+	 *
+	 * The PSoC 4 series appears to be unaffected by this issue.
+	 */
+	for (int i = 0; i < 2; i++) {
+		for (uint8_t j = 0; j < 3 && acquire_count == i; j++) {
+			retval = kitprog_acquire_psoc(devices[j], ACQUIRE_MODE_RESET, 3);
+			if (retval != ERROR_OK) {
+				LOG_DEBUG("Aquisition function failed for device 0x%02x.", devices[j]);
+				return retval;
+			}
+
+			if (kitprog_get_status() == ERROR_OK)
+				acquire_count++;
+		}
+
+		jtag_sleep(10);
+	}
+
+	if (acquire_count < 2)
+		return ERROR_FAIL;
+
+	return ERROR_OK;
+}
+
 static int kitprog_swd_sync(void)
 {
 	int transferred;
@@ -773,58 +774,7 @@ static void kitprog_execute_reset(struct jtag_command *cmd)
 
 	if (cmd->cmd.reset->srst == 1) {
 		if (kitprog_init_acquire_psoc) {
-			/* Try to acquire any device that will respond */
-			do {
-				retval = kitprog_acquire_psoc(DEVICE_PSOC4, ACQUIRE_MODE_RESET, 3);
-				if (retval != ERROR_OK)
-					break;
-
-				if (kitprog_get_status() == ERROR_OK)
-					break;
-
-				retval = kitprog_acquire_psoc(DEVICE_UNKNOWN, ACQUIRE_MODE_RESET, 3);
-				if (retval != ERROR_OK)
-					break;
-
-				if (kitprog_get_status() == ERROR_OK)
-					break;
-
-				retval = kitprog_acquire_psoc(DEVICE_PSOC5, ACQUIRE_MODE_RESET, 3);
-				if (retval != ERROR_OK)
-					break;
-
-				if (kitprog_get_status() == ERROR_OK)
-					break;
-
-				LOG_ERROR("No PSoC devices found");
-			} while (0);
-
-			jtag_sleep(1000);
-
-			do {
-				retval = kitprog_acquire_psoc(DEVICE_PSOC4, ACQUIRE_MODE_RESET, 3);
-				if (retval != ERROR_OK)
-					break;
-
-				if (kitprog_get_status() == ERROR_OK)
-					break;
-
-				retval = kitprog_acquire_psoc(DEVICE_UNKNOWN, ACQUIRE_MODE_RESET, 3);
-				if (retval != ERROR_OK)
-					break;
-
-				if (kitprog_get_status() == ERROR_OK)
-					break;
-
-				retval = kitprog_acquire_psoc(DEVICE_PSOC5, ACQUIRE_MODE_RESET, 3);
-				if (retval != ERROR_OK)
-					break;
-
-				if (kitprog_get_status() == ERROR_OK)
-					break;
-
-				LOG_ERROR("No PSoC devices found");
-			} while (0);
+			retval = kitprog_generic_acquire();
 		} else {
 			retval = kitprog_reset_target();
 			if (retval == ERROR_OK) {
