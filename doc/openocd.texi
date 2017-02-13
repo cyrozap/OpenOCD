@@ -2800,15 +2800,16 @@ As a configuration command, it can be used only before 'init'.
 
 @deffn {Interface Driver} {kitprog}
 This driver is for Cypress Semiconductor's KitProg adapters. The KitProg is an
-SWD-only adapter that is designed to be used with Cypress' PSoC and PRoC device
-families, but it may be possible to use it with other devices. If you are using
-this adapter with a PSoC or a PRoC, you may need to use add
-@command{kitprog_acquire_psoc} to your configuration script.
+SWD-only adapter that is designed to be used with Cypress's PSoC and PRoC device
+families, but it is possible to use it with some other devices. If you are using
+this adapter with a PSoC or a PRoC, you may need to add
+@command{kitprog_init_acquire_psoc} or @command{kitprog acquire_psoc} to your
+configuration script.
 
-@deffn {Config Command} {kitprog_acquire_psoc}
-If the KitProg is connected to a Cypress PSoC/PRoC device and the PSoC SWD pins
-are set to either JTAG or GPIO mode, you need to use this command to indicate
-that an acquisition sequence needs to be run on target init and reset.
+@deffn {Config Command} {kitprog_init_acquire_psoc}
+Indicate that a PSoC acquisition sequence needs to be run during adapter init.
+This is necessary for PSoC 5LP devices, for example, since they can't talk to
+OpenOCD unless this flag is set.
 @end deffn
 
 @deffn {Config Command} {kitprog_serial} [serial]
@@ -2816,8 +2817,15 @@ Select a KitProg device by its @var{serial}. If left unspecified, the first
 device detected by OpenOCD will be used.
 @end deffn
 
+@deffn {Command} {kitprog acquire_psoc}
+Run a PSoC acquisition sequence immediately. Typically, this should not be used
+outside of the target-specific configuration scripts since it hard-resets the
+target as a side-effect.
+This is necessary to reset some PSoC 4 series devices.
+@end deffn
+
 @deffn {Command} {kitprog info}
-Display various adapter information, like the hardware version, firmware
+Display various adapter information, such as the hardware version, firmware
 version, and target voltage.
 @end deffn
 @end deffn

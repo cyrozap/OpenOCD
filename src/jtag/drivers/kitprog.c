@@ -824,6 +824,14 @@ COMMAND_HANDLER(kitprog_handle_info_command)
 	return retval;
 }
 
+
+COMMAND_HANDLER(kitprog_handle_acquire_psoc_command)
+{
+	int retval = kitprog_generic_acquire();
+
+	return retval;
+}
+
 COMMAND_HANDLER(kitprog_handle_serial_command)
 {
 	if (CMD_ARGC == 1) {
@@ -840,7 +848,7 @@ COMMAND_HANDLER(kitprog_handle_serial_command)
 	return ERROR_OK;
 }
 
-COMMAND_HANDLER(kitprog_handle_acquire_psoc_command)
+COMMAND_HANDLER(kitprog_handle_init_acquire_psoc_command)
 {
 	kitprog_init_acquire_psoc = true;
 
@@ -854,6 +862,13 @@ static const struct command_registration kitprog_subcommand_handlers[] = {
 		.mode = COMMAND_EXEC,
 		.usage = "",
 		.help = "show KitProg info",
+	},
+	{
+		.name = "acquire_psoc",
+		.handler = &kitprog_handle_acquire_psoc_command,
+		.mode = COMMAND_EXEC,
+		.usage = "",
+		.help = "try to aquire a PSoC",
 	},
 	COMMAND_REGISTRATION_DONE
 };
@@ -874,8 +889,8 @@ static const struct command_registration kitprog_command_handlers[] = {
 		.usage = "serial_string",
 	},
 	{
-		.name = "kitprog_acquire_psoc",
-		.handler = &kitprog_handle_acquire_psoc_command,
+		.name = "kitprog_init_acquire_psoc",
+		.handler = &kitprog_handle_init_acquire_psoc_command,
 		.mode = COMMAND_CONFIG,
 		.help = "try to aquire a PSoC during init",
 		.usage = "",
