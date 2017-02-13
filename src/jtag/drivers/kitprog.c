@@ -185,7 +185,6 @@ static int kitprog_init(void)
 			LOG_ERROR("No PSoC devices found");
 			return retval;
 		}
-
 	}
 
 	/* Allocate packet buffers and queues */
@@ -773,16 +772,12 @@ static void kitprog_execute_reset(struct jtag_command *cmd)
 	int retval = ERROR_OK;
 
 	if (cmd->cmd.reset->srst == 1) {
-		if (kitprog_init_acquire_psoc) {
-			retval = kitprog_generic_acquire();
-		} else {
-			retval = kitprog_reset_target();
-			if (retval == ERROR_OK) {
-				/* Since the previous command also disables SWCLK output, we need to send an
-				 * SWD bus reset command to re-enable it.
-				 */
-				retval = kitprog_swd_reset();
-			}
+		retval = kitprog_reset_target();
+		if (retval == ERROR_OK) {
+			/* Since the previous command also disables SWCLK output, we need to send an
+			 * SWD bus reset command to re-enable it.
+			 */
+			retval = kitprog_swd_reset();
 		}
 	}
 
