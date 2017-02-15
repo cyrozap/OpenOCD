@@ -614,6 +614,9 @@ static int kitprog_swd_reset(void)
 static int kitprog_swd_switch_seq(enum swd_special_seq seq)
 {
 	switch (seq) {
+		case JTAG_TO_SWD:
+			LOG_INFO("KitProg adapters do not support the JTAG-to-SWD sequence. An SWD line reset will be performed instead.");
+			/* Fall through to fix target reset issue */
 		case LINE_RESET:
 			LOG_DEBUG("SWD line reset");
 			if (kitprog_swd_reset() != ERROR_OK)
@@ -773,12 +776,13 @@ static void kitprog_execute_reset(struct jtag_command *cmd)
 
 	if (cmd->cmd.reset->srst == 1) {
 		retval = kitprog_reset_target();
-		if (retval == ERROR_OK) {
-			/* Since the previous command also disables SWCLK output, we need to send an
-			 * SWD bus reset command to re-enable it.
-			 */
-			retval = kitprog_swd_reset();
-		}
+		/* Since the previous command also disables SWCLK output, we need to send an
+		 * SWD bus reset command to re-enable it. For some reason, running
+		 * kitprog_swd_reset() immediately after kitprog_reset_target() won't
+		 * actually fix this. Instead, kitprog_swd_reset() will be run once OpenOCD
+		 * tries to send a JTAG-to-SWD sequence, which should happen during
+		 * swd_check_reconnect (see the JTAG_TO_SWD case in kitprog_swd_switch_seq).
+		 */
 	}
 
 	if (retval != ERROR_OK)
