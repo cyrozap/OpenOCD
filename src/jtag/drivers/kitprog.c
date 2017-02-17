@@ -96,7 +96,7 @@ struct kitprog {
 	uint16_t packet_size;
 	uint16_t packet_index;
 	uint8_t *packet_buffer;
-	wchar_t *serial;
+	char *serial;
 	uint8_t hardware_version;
 	uint8_t minor_version;
 	uint8_t major_version;
@@ -265,19 +265,14 @@ static int kitprog_get_usb_serial(void)
 	desc_string[retval] = '\0';
 
 	/* Allocate memory for the serial number */
-	kitprog_handle->serial = malloc((retval + 1) * sizeof(wchar_t));
+	kitprog_handle->serial = malloc((retval + 1) * sizeof(char));
 	if (kitprog_handle->serial == NULL) {
 		LOG_ERROR("Failed to allocate memory for the serial number");
 		return ERROR_FAIL;
 	}
 
-	/* Convert the ASCII serial number into a (wchar_t *) */
-	if (mbstowcs(kitprog_handle->serial, desc_string, retval + 1) == (size_t)-1) {
-		free(kitprog_handle->serial);
-		kitprog_serial = NULL;
-		LOG_ERROR("unable to convert serial");
-		return ERROR_FAIL;
-	}
+	/* Store the serial number */
+	strncpy(kitprog_handle->serial, desc_string, retval + 1);
 
 	return ERROR_OK;
 }
@@ -297,8 +292,22 @@ static int kitprog_usb_open(void)
 	if (kitprog_get_usb_serial() != ERROR_OK)
 		LOG_WARNING("Failed to get KitProg serial number");
 
+	/* Convert the ASCII serial number into a (wchar_t *) */
+	size_t len = strlen(kitprog_handle->serial);
+	wchar_t *hid_serial = malloc((len + 1) * sizeof(wchar_t));
+	if (hid_serial == NULL) {
+		LOG_ERROR("Failed to allocate memory for the serial number");
+		return ERROR_FAIL;
+	}
+	if (mbstowcs(hid_serial, kitprog_handle->serial, len + 1) == (size_t)-1) {
+		free(hid_serial);
+		LOG_ERROR("Failed to convert serial number");
+		return ERROR_FAIL;
+	}
+
 	/* Use HID for the KitBridge interface */
-	kitprog_handle->hid_handle = hid_open(VID, PID, kitprog_handle->serial);
+	kitprog_handle->hid_handle = hid_open(VID, PID, hid_serial);
+	free(hid_serial);
 	if (kitprog_handle->hid_handle == NULL) {
 		LOG_ERROR("Failed to open KitBridge (HID) interface");
 		return ERROR_FAIL;
