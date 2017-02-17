@@ -150,8 +150,10 @@ static int kitprog_init(void)
 	int retval;
 
 	kitprog_handle = malloc(sizeof(struct kitprog));
-	if (kitprog_handle == NULL)
+	if (kitprog_handle == NULL) {
+		LOG_ERROR("Failed to allocate memory");
 		return ERROR_FAIL;
+	}
 
 	if (kitprog_usb_open() != ERROR_OK) {
 		LOG_ERROR("Can't find a KitProg device! Please check device connections and permissions.");
@@ -190,13 +192,17 @@ static int kitprog_init(void)
 	/* Allocate packet buffers and queues */
 	kitprog_handle->packet_size = SWD_MAX_BUFFER_LENGTH;
 	kitprog_handle->packet_buffer = malloc(SWD_MAX_BUFFER_LENGTH);
-	if (kitprog_handle->packet_buffer == NULL)
+	if (kitprog_handle->packet_buffer == NULL) {
+		LOG_ERROR("Failed to allocate memory for the packet buffer");
 		return ERROR_FAIL;
+	}
 
 	pending_queue_len = SWD_MAX_BUFFER_LENGTH / 5;
 	pending_transfers = malloc(pending_queue_len * sizeof(*pending_transfers));
-	if (pending_transfers == NULL)
+	if (pending_transfers == NULL) {
+		LOG_ERROR("Failed to allocate memory for the SWD transfer queue");
 		return ERROR_FAIL;
+	}
 
 	return ERROR_OK;
 }
@@ -260,8 +266,10 @@ static int kitprog_get_usb_serial(void)
 
 	/* Allocate memory for the serial number */
 	kitprog_handle->serial = calloc(retval + 1, sizeof(wchar_t));
-	if (kitprog_handle->serial == NULL)
+	if (kitprog_handle->serial == NULL) {
+		LOG_ERROR("Failed to allocate memory for the serial number");
 		return ERROR_FAIL;
+	}
 
 	/* Convert the ASCII serial number into a (wchar_t *) */
 	if (mbstowcs(kitprog_handle->serial, desc_string, retval + 1) == (size_t)-1) {
@@ -841,8 +849,10 @@ COMMAND_HANDLER(kitprog_handle_serial_command)
 	if (CMD_ARGC == 1) {
 		size_t len = strlen(CMD_ARGV[0]);
 		kitprog_serial = calloc(len + 1, sizeof(char));
-		if (kitprog_serial == NULL)
+		if (kitprog_serial == NULL) {
+			LOG_ERROR("Failed to allocate memory for the serial number");
 			return ERROR_FAIL;
+		}
 		strncpy(kitprog_serial, CMD_ARGV[0], len + 1);
 	} else {
 		LOG_ERROR("expected exactly one argument to kitprog_serial <serial-number>");
