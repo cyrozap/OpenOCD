@@ -265,7 +265,7 @@ static int kitprog_get_usb_serial(void)
 	desc_string[retval] = '\0';
 
 	/* Allocate memory for the serial number */
-	kitprog_handle->serial = calloc(retval + 1, sizeof(wchar_t));
+	kitprog_handle->serial = malloc((retval + 1) * sizeof(wchar_t));
 	if (kitprog_handle->serial == NULL) {
 		LOG_ERROR("Failed to allocate memory for the serial number");
 		return ERROR_FAIL;
@@ -848,7 +848,7 @@ COMMAND_HANDLER(kitprog_handle_serial_command)
 {
 	if (CMD_ARGC == 1) {
 		size_t len = strlen(CMD_ARGV[0]);
-		kitprog_serial = calloc(len + 1, sizeof(char));
+		kitprog_serial = malloc((len + 1) * sizeof(char));
 		if (kitprog_serial == NULL) {
 			LOG_ERROR("Failed to allocate memory for the serial number");
 			return ERROR_FAIL;
