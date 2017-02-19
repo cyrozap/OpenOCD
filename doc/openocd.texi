@@ -2806,13 +2806,24 @@ this adapter with a PSoC or a PRoC, you may need to add
 @command{kitprog_init_acquire_psoc} or @command{kitprog acquire_psoc} to your
 configuration script.
 
+Known limitations:
+@itemize @bullet
+@item The frequency of SWCLK cannot be configured, and varies between 1.6 MHz
+and 2.7 MHz.
+@item JTAG-to-SWD sequences are replaced by "SWD line reset" in the driver. This
+if for two reasons. First, the KitProg does not support sending arbitrary SWD
+sequences, and the only sequence implemented in its firmware is SWD line reset.
+Second, due to a firmware quirk, an SWD line reset sequence must be sent after
+every target reset in order to re-establish communications with the target.
+@end itemize
+
 @deffn {Config Command} {kitprog_init_acquire_psoc}
 Indicate that a PSoC acquisition sequence needs to be run during adapter init.
 This is necessary for PSoC 5LP devices, for example, since they can't talk to
 OpenOCD unless this flag is set.
 @end deffn
 
-@deffn {Config Command} {kitprog_serial} [serial]
+@deffn {Config Command} {kitprog_serial} serial
 Select a KitProg device by its @var{serial}. If left unspecified, the first
 device detected by OpenOCD will be used.
 @end deffn
