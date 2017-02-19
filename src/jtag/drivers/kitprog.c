@@ -14,7 +14,7 @@
  *   Copyright (C) 2015 by Paul Fertser                                    *
  *   fercerpav@gmail.com                                                   *
  *                                                                         *
- *   Copyright (C) 2015-2016 by Forest Crossman                            *
+ *   Copyright (C) 2015-2017 by Forest Crossman                            *
  *   cyrozap@gmail.com                                                     *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
@@ -28,8 +28,7 @@
  *   GNU General Public License for more details.                          *
  *                                                                         *
  *   You should have received a copy of the GNU General Public License     *
- *   along with this program; if not, write to the                         *
- *   Free Software Foundation, Inc.,                                       *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
  ***************************************************************************/
 
 #ifdef HAVE_CONFIG_H
