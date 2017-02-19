@@ -294,7 +294,7 @@ static int kitprog_usb_open(void)
 
 	/* Convert the ASCII serial number into a (wchar_t *) */
 	size_t len = strlen(kitprog_handle->serial);
-	wchar_t *hid_serial = malloc((len + 1) * sizeof(wchar_t));
+	wchar_t *hid_serial = calloc(len + 1, sizeof(wchar_t));
 	if (hid_serial == NULL) {
 		LOG_ERROR("Failed to allocate memory for the serial number");
 		return ERROR_FAIL;
