@@ -2820,7 +2820,8 @@ every target reset in order to re-establish communications with the target.
 @deffn {Config Command} {kitprog_init_acquire_psoc}
 Indicate that a PSoC acquisition sequence needs to be run during adapter init.
 This is necessary for PSoC 5LP devices, for example, since they can't talk to
-OpenOCD unless this flag is set.
+OpenOCD unless this flag is set. Please be aware that the acquisition sequence
+hard-resets the target.
 @end deffn
 
 @deffn {Config Command} {kitprog_serial} serial
