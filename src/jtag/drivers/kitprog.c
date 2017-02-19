@@ -66,9 +66,9 @@
 #define PROTOCOL_JTAG 0x00
 #define PROTOCOL_SWD  0x01
 
-#define DEVICE_PSOC4   0x00
-#define DEVICE_UNKNOWN 0x01
-#define DEVICE_PSOC5   0x03
+#define DEVICE_PSOC4 0x00
+#define DEVICE_PSOC3 0x01
+#define DEVICE_PSOC5 0x03
 
 #define ACQUIRE_MODE_RESET       0x00
 #define ACQUIRE_MODE_POWER_CYCLE 0x01
@@ -566,7 +566,7 @@ static int kitprog_swd_reset(void)
 
 static int kitprog_generic_acquire(void)
 {
-	const uint8_t devices[] = {DEVICE_PSOC4, DEVICE_UNKNOWN, DEVICE_PSOC5};
+	const uint8_t devices[] = {DEVICE_PSOC4, DEVICE_PSOC3, DEVICE_PSOC5};
 
 	int retval;
 	int acquire_count = 0;
