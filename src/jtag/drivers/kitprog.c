@@ -590,19 +590,20 @@ static int kitprog_generic_acquire(void)
 	int retval;
 	int acquire_count = 0;
 
-	/* The PSoC 5LP seems to have a curious bug: After applying power to the
-	 * device but before running an acquisition sequence, if only one aquisition
-	 * sequence is run, the CPU will be halted and OpenOCD will be unable to
-	 * find the MEM-AP. In order to remedy that, after a short delay a second
-	 * acquisition sequence must be run. The strange part is, the second
-	 * sequence does not appear to require the correct device type to be
-	 * used, i.e., kitprog_acquire_psoc(DEVICE_PSOC5, ...) followed by
+	/* The PSoC 5LP exhibits some curious behavior here: After applying power to
+	 * the device but before running an acquisition sequence, if only one
+	 * aquisition sequence is run, the CPU will be halted and OpenOCD will be
+	 * unable to find the MEM-AP. In order to remedy that, after a short delay a
+	 * second acquisition sequence must be run. The strange part is, the second
+	 * sequence does not appear to require the correct device type to be used,
+	 * i.e., kitprog_acquire_psoc(DEVICE_PSOC5, ...) followed by
 	 * kitprog_acquire_psoc(DEVICE_PSOC4, ...) will enable OpenOCD to control
 	 * the device. Simply resetting the device with kitprog_reset_target()
-	 * (followed by kitprog_swd_reset() to re-enable SWD) in lieu of an
+	 * (followed by kitprog_swd_seq(...) to re-enable SWD) in lieu of an
 	 * aquisition sequence will not work.
 	 *
-	 * PSoC Programmer does the same thing, so this may be a silicon bug.
+	 * PSoC Programmer does the same thing, so this may or may not be normal
+	 * Test Mode behavior.
 	 *
 	 * The PSoC 4 series appears to be unaffected by this issue.
 	 */
