@@ -2810,11 +2810,13 @@ Known limitations:
 @itemize @bullet
 @item The frequency of SWCLK cannot be configured, and varies between 1.6 MHz
 and 2.7 MHz.
-@item JTAG-to-SWD sequences are replaced by "SWD line reset" in the driver. This
-if for two reasons. First, the KitProg does not support sending arbitrary SWD
-sequences, and the only sequence implemented in its firmware is SWD line reset.
-Second, due to a firmware quirk, an SWD line reset sequence must be sent after
-every target reset in order to re-establish communications with the target.
+@item For firmware versions below 2.14, "JTAG to SWD" sequences are replaced by
+"SWD line reset" in the driver. This is for two reasons. First, the KitProg does
+not support sending arbitrary SWD sequences, and only firmware 2.14 and later
+implement both "JTAG to SWD" and "SWD line reset" in firmware. Earlier firmware
+versions only implement "SWD line reset". Second, due to a firmware quirk, an
+SWD sequence must be sent after every target reset in order to re-establish
+communications with the target.
 @end itemize
 
 @deffn {Config Command} {kitprog_init_acquire_psoc}

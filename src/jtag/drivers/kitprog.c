@@ -61,17 +61,21 @@
 #define CONTROL_MODE_SET_PROGRAMMER_PROTOCOL 0x40
 #define CONTROL_MODE_SYNCHRONIZE_TRANSFER    0x41
 #define CONTROL_MODE_ACQUIRE_SWD_TARGET      0x42
-#define CONTROL_MODE_RESET_SWD_BUS           0x43
+#define CONTROL_MODE_SEND_SWD_SEQUENCE       0x43
 
 #define PROTOCOL_JTAG 0x00
 #define PROTOCOL_SWD  0x01
 
-#define DEVICE_PSOC4 0x00
-#define DEVICE_PSOC3 0x01
-#define DEVICE_PSOC5 0x03
+#define DEVICE_PSOC4   0x00
+#define DEVICE_PSOC3   0x01
+#define DEVICE_UNKNOWN 0x02
+#define DEVICE_PSOC5   0x03
 
 #define ACQUIRE_MODE_RESET       0x00
 #define ACQUIRE_MODE_POWER_CYCLE 0x01
+
+#define SEQUENCE_LINE_RESET  0x00
+#define SEQUENCE_JTAG_TO_SWD 0x01
 
 #define PROGRAMMER_NOK_NACK 0x00
 #define PROGRAMMER_OK_ACK   0x01
@@ -100,6 +104,8 @@ struct kitprog {
 	uint8_t minor_version;
 	uint8_t major_version;
 	uint16_t millivolts;
+
+	bool supports_jtag_to_swd;
 };
 
 struct pending_transfer_result {
@@ -133,7 +139,7 @@ static int kitprog_acquire_psoc(uint8_t psoc_type, uint8_t acquire_mode,
 		uint8_t max_attempts);
 static int kitprog_reset_target(void);
 static int kitprog_swd_sync(void);
-static int kitprog_swd_reset(void);
+static int kitprog_swd_seq(uint8_t seq_type);
 
 static int kitprog_generic_acquire(void);
 
@@ -141,6 +147,11 @@ static int kitprog_swd_run_queue(void);
 static void kitprog_swd_queue_cmd(uint8_t cmd, uint32_t *dst, uint32_t data);
 static int kitprog_swd_switch_seq(enum swd_special_seq seq);
 
+
+static inline int mm_to_version(uint8_t major, uint8_t minor)
+{
+	return (major << 8) | minor;
+}
 
 static int kitprog_init(void)
 {
@@ -161,6 +172,14 @@ static int kitprog_init(void)
 	if (kitprog_get_info() != ERROR_OK)
 		return ERROR_FAIL;
 
+	/* Compatibility check */
+	kitprog_handle->supports_jtag_to_swd = true;
+	int kitprog_version = mm_to_version(kitprog_handle->major_version, kitprog_handle->minor_version);
+	if (kitprog_version < mm_to_version(2, 14)) {
+		LOG_WARNING("KitProg firmware versions below v2.14 do not support sending JTAG to SWD sequences. These sequences will be substituted with SWD line resets.");
+		kitprog_handle->supports_jtag_to_swd = false;
+	}
+
 	/* I have no idea what this does */
 	if (kitprog_set_unknown() != ERROR_OK)
 		return ERROR_FAIL;
@@ -174,7 +193,7 @@ static int kitprog_init(void)
 		return ERROR_FAIL;
 
 	/* Reset the SWD bus */
-	if (kitprog_swd_reset() != ERROR_OK)
+	if (kitprog_swd_seq(SEQUENCE_LINE_RESET) != ERROR_OK)
 		return ERROR_FAIL;
 
 	if (kitprog_init_acquire_psoc) {
@@ -540,7 +559,7 @@ static int kitprog_swd_sync(void)
 	return ERROR_OK;
 }
 
-static int kitprog_swd_reset(void)
+static int kitprog_swd_seq(uint8_t seq_type)
 {
 	int transferred;
 	char status = PROGRAMMER_NOK_NACK;
@@ -548,8 +567,8 @@ static int kitprog_swd_reset(void)
 	transferred = jtag_libusb_control_transfer(kitprog_handle->usb_handle,
 		LIBUSB_ENDPOINT_IN | LIBUSB_REQUEST_TYPE_VENDOR | LIBUSB_RECIPIENT_DEVICE,
 		CONTROL_TYPE_WRITE,
-		(CONTROL_MODE_RESET_SWD_BUS << 8) | CONTROL_COMMAND_PROGRAM,
-		0, &status, 1, 0);
+		(CONTROL_MODE_SEND_SWD_SEQUENCE << 8) | CONTROL_COMMAND_PROGRAM,
+		seq_type, &status, 1, 0);
 
 	if (transferred == 0) {
 		LOG_DEBUG("Zero bytes transferred");
@@ -633,11 +652,18 @@ static int kitprog_swd_switch_seq(enum swd_special_seq seq)
 {
 	switch (seq) {
 		case JTAG_TO_SWD:
-			LOG_INFO("KitProg adapters do not support the JTAG-to-SWD sequence. An SWD line reset will be performed instead.");
-			/* Fall through to fix target reset issue */
+			if (kitprog_handle->supports_jtag_to_swd) {
+				LOG_DEBUG("JTAG to SWD");
+				if (kitprog_swd_seq(SEQUENCE_JTAG_TO_SWD) != ERROR_OK)
+					return ERROR_FAIL;
+				break;
+			} else {
+				LOG_DEBUG("JTAG to SWD not supported");
+				/* Fall through to fix target reset issue */
+			}
 		case LINE_RESET:
 			LOG_DEBUG("SWD line reset");
-			if (kitprog_swd_reset() != ERROR_OK)
+			if (kitprog_swd_seq(SEQUENCE_LINE_RESET) != ERROR_OK)
 				return ERROR_FAIL;
 			break;
 		default:
@@ -798,8 +824,8 @@ static void kitprog_execute_reset(struct jtag_command *cmd)
 		retval = kitprog_reset_target();
 		/* Since the previous command also disables SWCLK output, we need to send an
 		 * SWD bus reset command to re-enable it. For some reason, running
-		 * kitprog_swd_reset() immediately after kitprog_reset_target() won't
-		 * actually fix this. Instead, kitprog_swd_reset() will be run once OpenOCD
+		 * kitprog_swd_seq() immediately after kitprog_reset_target() won't
+		 * actually fix this. Instead, kitprog_swd_seq() will be run once OpenOCD
 		 * tries to send a JTAG-to-SWD sequence, which should happen during
 		 * swd_check_reconnect (see the JTAG_TO_SWD case in kitprog_swd_switch_seq).
 		 */
