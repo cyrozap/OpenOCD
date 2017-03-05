@@ -2839,7 +2839,7 @@ device detected by OpenOCD will be used.
 Run a PSoC acquisition sequence immediately. Typically, this should not be used
 outside of the target-specific configuration scripts since it hard-resets the
 target as a side-effect.
-This is necessary to reset some PSoC 4 series devices.
+This is necessary for "reset halt" on some PSoC 4 series devices.
 @end deffn
 
 @deffn {Command} {kitprog info}
