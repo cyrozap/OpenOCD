@@ -2817,13 +2817,17 @@ implement both "JTAG to SWD" and "SWD line reset" in firmware. Earlier firmware
 versions only implement "SWD line reset". Second, due to a firmware quirk, an
 SWD sequence must be sent after every target reset in order to re-establish
 communications with the target.
+@item Due in part to the limitation above, KitProg devices with firmware below
+version 2.14 will need to use @command{kitprog_init_acquire_psoc} in order to
+communicate with PSoC 5LP devices. This is because, assuming debug is not
+disabled on the PSoC, the PSoC 5LP needs its JTAG interface switched to SWD
+mode before communication can begin, but prior to firmware 2.14, "JTAG to SWD"
+could only be sent with an acquisition sequence.
 @end itemize
 
 @deffn {Config Command} {kitprog_init_acquire_psoc}
 Indicate that a PSoC acquisition sequence needs to be run during adapter init.
-This is necessary for PSoC 5LP devices, for example, since they can't talk to
-OpenOCD unless this flag is set. Please be aware that the acquisition sequence
-hard-resets the target.
+Please be aware that the acquisition sequence hard-resets the target.
 @end deffn
 
 @deffn {Config Command} {kitprog_serial} serial
