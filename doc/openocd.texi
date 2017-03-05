@@ -2806,6 +2806,12 @@ this adapter with a PSoC or a PRoC, you may need to add
 @command{kitprog_init_acquire_psoc} or @command{kitprog acquire_psoc} to your
 configuration script.
 
+Note that this driver is for the proprietary KitProg protocol, not the CMSIS-DAP
+mode introduced in firmware 2.14. If the KitProg is in CMSIS-DAP mode, it cannot
+be used with this driver, and must either be used with the cmsis-dap driver or
+switched back to KitProg mode. See the Cypress KitProg User Guide for
+instructions on how to switch KitProg modes.
+
 Known limitations:
 @itemize @bullet
 @item The frequency of SWCLK cannot be configured, and varies between 1.6 MHz
