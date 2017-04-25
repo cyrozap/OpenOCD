@@ -750,7 +750,7 @@ static int kitprog_swd_run_queue(void)
 		/* We use the maximum buffer size here because the KitProg sometimes
 		 * doesn't like bulk reads of fewer than 62 bytes. (?!?!)
 		 */
-		ret = jtag_libusb_bulk_write(kitprog_handle->usb_handle,
+		ret = jtag_libusb_bulk_read(kitprog_handle->usb_handle,
 				BULK_EP_IN | LIBUSB_ENDPOINT_IN, (char *)buffer,
 				SWD_MAX_BUFFER_LENGTH, 0);
 		if (ret > 0) {
