@@ -590,22 +590,17 @@ static int kitprog_generic_acquire(void)
 	int retval;
 	int acquire_count = 0;
 
-	/* The PSoC 5LP exhibits some curious behavior here: After applying power to
-	 * the device but before running an acquisition sequence, if only one
-	 * aquisition sequence is run, the CPU will be halted and OpenOCD will be
-	 * unable to find the MEM-AP. In order to remedy that, after a short delay a
-	 * second acquisition sequence must be run. The strange part is, the second
-	 * sequence does not appear to require the correct device type to be used,
-	 * i.e., kitprog_acquire_psoc(DEVICE_PSOC5, ...) followed by
-	 * kitprog_acquire_psoc(DEVICE_PSOC4, ...) will enable OpenOCD to control
-	 * the device. Simply resetting the device with kitprog_reset_target()
-	 * (followed by kitprog_swd_seq(...) to re-enable SWD) in lieu of an
-	 * aquisition sequence will not work.
+	/* Due to the way the SWD port is shared between the Test Controller (TC)
+	 * and the Cortex-M3 DAP on the PSoC 5LP, the TC is the default SWD target
+	 * after power is applied. To access the DAP, the PSoC 5LP requires at least
+	 * one acquisition sequence to be run (which switches the SWD mux from the
+	 * TC to the DAP). However, after the mux is switched, the Cortex-M3 will be
+	 * held in reset until a series of registers are written to (see section 5.2
+	 * of the PSoC 5LP Device Programming Specifications for details).
 	 *
-	 * PSoC Programmer does the same thing, so this may or may not be normal
-	 * Test Mode behavior.
-	 *
-	 * The PSoC 4 series appears to be unaffected by this issue.
+	 * Instead of writing the registers in this function, we just do what the
+	 * Cypress tools do and run the acquisition sequence a second time. This
+	 * will take the Cortex-M3 out of reset and enable debugging.
 	 */
 	for (int i = 0; i < 2; i++) {
 		for (uint8_t j = 0; j < sizeof devices && acquire_count == i; j++) {
